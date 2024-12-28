@@ -1,37 +1,50 @@
 // pages/list/list.js
-// 引入购物车动画模块
- //此处需要补充代码
+const fetch = require('../../utils/fetch')
+const shopcartAnimate = require('../../utils/shopcartAnimate')
+
 Page({
-   //此处需要补充代码,
+  data: {
+    foodList: [],
+    promotion: {},
+    activeIndex: 0,
+    tapIndex: 0,
+    cartList: {},
+    cartNumber: 0,
+    cartPrice: 0,
+    showCart: false,
+    cartBall: {
+      show: false,
+      x: 0,
+      y: 0
+    }
+  },
   disableNextScroll: false,
   shopcartAnimate: null,
   onLoad: function () {
     wx.showLoading({
       title: '努力加载中'
     })
-    fetch('/food/list').then(data => {
-      wx.hideLoading()
-      this.setData({
-        foodList: data.list,
-        promotion: data.promotion[0]
-      }, () => {
-        var query = wx.createSelectorQuery()
-        var top = 0
-        var height = 0
-        query.select('.food').boundingClientRect(rect => {
-          top = rect.top
-          height = rect.height
-        })
-        query.selectAll('.food-category').boundingClientRect(res => {
-          res.forEach(rect => {
-            categoryPosition.push(rect.top - top - height / 3)
+    fetch('/food/list')
+      .then(data => {
+        wx.hideLoading()
+        this.setData({
+          foodList: data.list,
+          promotion: data.promotion
+        }, () => {
+          var query = wx.createSelectorQuery()
+          var top = 0
+          query.select('.food').boundingClientRect(rect => {
+            top = rect.top
           })
+          query.selectAll('.food-category').boundingClientRect(res => {
+            this.categoryPosition = res.map(item => item.top - top - 30)
+          })
+          query.exec()
         })
-        query.exec()
       })
-    }, () => {
-      this.onLoad()
-    })
+      .catch(() => {
+        this.onLoad()
+      })
     this.shopcartAnimate = shopcartAnimate('.operate-shopcart-icon', this)
   },
 
@@ -50,7 +63,7 @@ Page({
     }
     var scrollTop = e.detail.scrollTop
     var activeIndex = 0
-    categoryPosition.forEach((item, i) => {
+    this.categoryPosition.forEach((item, i) => {
       if (scrollTop >= item) {
         activeIndex = i
       }
@@ -59,13 +72,30 @@ Page({
       this.setData({ activeIndex })
     }
   },
- //此处需要补充代码,
   showCartList: function () {
     if (this.data.cartNumber > 0) {
       this.setData({
         showCart: !this.data.showCart
       })
     }
+  },
+  addToCart: function (e) {
+    var categoryIndex = e.currentTarget.dataset.category_index
+    var index = e.currentTarget.dataset.index
+    var food = this.data.foodList[categoryIndex].food[index]
+    var id = food.id
+    var cartList = this.data.cartList
+    if (!cartList[id]) {
+      cartList[id] = Object.assign({}, food, { number: 1 })
+    } else {
+      ++cartList[id].number
+    }
+    this.setData({
+      cartList: cartList,
+      cartNumber: ++this.data.cartNumber,
+      cartPrice: this.data.cartPrice + food.price
+    })
+    this.shopcartAnimate.start(e)
   },
   cartNumberAdd: function(e) {
     var id = e.currentTarget.dataset.id
@@ -99,7 +129,24 @@ Page({
       }
     }
   },
-   //此处需要补充代码
-     
+  cartClear: function () {
+    this.setData({
+      cartList: {},
+      cartNumber: 0,
+      cartPrice: 0,
+      showCart: false
+    })
+  },
+  order: function () {
+    if (this.data.cartNumber === 0) return
+    fetch('/food/order', {cart: JSON.stringify(this.data.cartList)})
+      .then(data => {
+        wx.navigateTo({
+          url: '/pages/order/checkout/checkout?order_id=' + data.id
+        })
+      })
+      .catch(() => {
+        this.order()
+      })
+  }
 })
-

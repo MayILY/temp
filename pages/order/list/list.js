@@ -1,27 +1,36 @@
 ﻿// pages/order/list/list.js
- //此处需要补充代码
+const fetch = require('../../../utils/fetch')
+
 Page({
-   //此处需要补充代码,
-  // 定义请求方法，封装请求的公共部分
+  data: {
+    order: [],
+    is_last: false
+  },
+  row: 10,
+  last_id: 0,
+  onLoad: function () {
+    this.onPullDownRefresh()
+  },
   loadData: function (options) {
     wx.showNavigationBarLoading()
     fetch('/food/orderlist', {
       last_id: options.last_id,
       row: this.row
-    }).then(data => {
-      this.last_id = data.last_id
-      this.setData({
-        is_last: data.list.length < this.row
-      }, () => {
-        wx.hideNavigationBarLoading()
-        options.success(data)
-      })
-    }, () => {
-      wx.hideNavigationBarLoading()
-      options.fail()
     })
+      .then(data => {
+        this.last_id = data.last_id
+        this.setData({
+          is_last: data.list.length < this.row
+        }, () => {
+          wx.hideNavigationBarLoading()
+          options.success(data)
+        })
+      })
+      .catch(() => {
+        wx.hideNavigationBarLoading()
+        options.fail()
+      })
   },
-  // 下拉刷新
   onPullDownRefresh: function () {
     wx.showLoading({
       title: '加载中'
@@ -41,7 +50,6 @@ Page({
       }
     })
   },
-  // 上拉触底
   onReachBottom: function () {
     if (this.data.is_last) {
       return
@@ -50,9 +58,7 @@ Page({
       last_id: this.last_id,
       success: data => {
         var order = this.data.order
-        data.list.forEach(item => {
-          order.push(item)
-        })
+        order = order.concat(data.list)
         this.setData({
           order: order
         })
@@ -62,5 +68,9 @@ Page({
       }
     })
   },
-   //此处需要补充代码
+  detail: function (e) {
+    wx.navigateTo({
+      url: '/pages/order/detail/detail?order_id=' + e.currentTarget.dataset.id
+    })
+  }
 })

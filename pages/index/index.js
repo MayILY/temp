@@ -1,9 +1,8 @@
 // index.js
- //此处需要补充代码
 const app = getApp()
-const fetch = app.fetch
+const fetch = require('../../utils/fetch')
+
 Page({
-  //此处需要补充代码
   data: {
     swiper: [],
     ad: '',
@@ -15,16 +14,18 @@ Page({
         title: '努力加载中',
         mask: true
       })
-      fetch('food/index').then(data => {
-        wx.hideLoading()
-        this.setData({
-          swiper: data.img_swiper,
-          ad: data.img_ad,
-          category: data.img_category
+      fetch('/food/index')
+        .then(data => {
+          wx.hideLoading()
+          this.setData({
+            swiper: data.swiper,
+            ad: data.ad,
+            category: data.category
+          })
         })
-      }, () => {
-        callback()
-      })
+        .catch(() => {
+          callback()
+        })
     }
     if (app.userInfoReady) {
       callback()
